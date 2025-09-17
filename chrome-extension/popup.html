@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Order Data Extractor</h2>
+      <div class="version">v1.0</div>
+    </div>
+    
+    <div class="main-content">
+      <button id="extractBtn" class="extract-button">
+        <span class="button-icon">📋</span>
+        Extract & Copy Data
+      </button>
+      
+      <div id="status" class="status-container"></div>
+      
+      <div id="preview" class="preview-container"></div>
+      
+      <div class="info">
+        <p class="help-text">Click the button above to extract order data from this page and copy it to your clipboard for Excel.</p>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <div class="field-count">
+        <span class="label">Fields to extract:</span>
+        <span class="count">12</span>
+      </div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
