@@ -1,10 +1,18 @@
 // Order Data Extractor - Content Script
 // Extracts order/shipment data from web pages based on CSS selectors
 
-class OrderDataExtractor {
-  constructor() {
-    this.data = {};
+(function(){
+  // Prevent double-loading on reinjection
+  if (window.__ORDER_EXTRACTOR_LOADED__) {
+    console.log('Order Data Extractor content script already loaded');
+    return;
   }
+  window.__ORDER_EXTRACTOR_LOADED__ = true;
+
+  class OrderDataExtractor {
+    constructor() {
+      this.data = {};
+    }
 
   // Get today's date in MM/DD/YYYY format
   getTodaysDate() {
@@ -14,12 +22,26 @@ class OrderDataExtractor {
   // Extract Order Number
   extractOrderNumber() {
     try {
-      const orderElement = document.querySelector('.fulfillment-plan-activity-entry-zYYrn3H.od-canvas-fulfillment-plan-activity-entry');
-      if (orderElement) {
-        const text = orderElement.textContent;
-        const match = text.match(/Order #\s*([^\s]+)/);
-        return match ? match[1] : 'N/A';
+      // 1) Preferred: iterate all matching activity entries and find the one that actually has 'Order #'
+      const entries = document.querySelectorAll('.fulfillment-plan-activity-entry-zYYrn3H.od-canvas-fulfillment-plan-activity-entry');
+      for (const el of entries) {
+        const text = (el.textContent || '').trim();
+        const match = text.match(/Order\s*#\s*([^\s]+)/i);
+        if (match) {
+          return match[1];
+        }
       }
+
+      // 2) Fallback: scan common text elements across the page for 'Order #' pattern
+      const candidates = document.querySelectorAll('div, span, p, li');
+      for (const el of candidates) {
+        const text = (el.textContent || '').trim();
+        const match = text.match(/Order\s*#\s*([^\s]+)/i);
+        if (match) {
+          return match[1];
+        }
+      }
+
       return 'N/A';
     } catch (error) {
       console.warn('Error extracting order number:', error);
@@ -348,6 +370,11 @@ class OrderDataExtractor {
   }
 }
 
+  // Expose the class to window for external usage
+  window.OrderDataExtractor = OrderDataExtractor;
+
+})();
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Content script received message:', request);
@@ -356,7 +383,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Starting data extraction...');
     
     try {
-      const extractor = new OrderDataExtractor();
+      const extractor = new window.OrderDataExtractor();
       const extractedData = extractor.extractAllData();
       const formattedData = extractor.formatForExcel();
       const successCount = extractor.getSuccessCount();
