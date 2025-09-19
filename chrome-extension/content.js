@@ -308,7 +308,19 @@
     try {
       const carrierElement = document.querySelector('.h3-q6GsezA.service-name-gQ0OeUi');
       if (carrierElement) {
-        return carrierElement.textContent.trim();
+        const rawText = carrierElement.textContent.trim();
+        const normalized = rawText.toLowerCase();
+
+        // Only return USPS or FedEx. Anything else is treated as N/A
+        if (normalized.includes('usps') || normalized.includes('united states postal')) {
+          return 'USPS';
+        }
+        if (normalized.includes('fedex') || normalized.includes('fed ex')) {
+          return 'FedEx';
+        }
+
+        // Not USPS or FedEx
+        return 'N/A';
       }
       return 'N/A';
     } catch (error) {
