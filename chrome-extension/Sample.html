@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Modern styling scoped to the sample demo UI */
+    :root {
+      --card-bg: #ffffff;
+      --card-border: #e5e7eb;
+      --muted: #3466ca;
+      --text: #296cdf;
+      --accent: #2563eb; /* blue-600 */
+      --accent-hover: #1d4ed8; /* blue-700 */
+      --row: #f9fafb;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --card-bg: #000000;
+        --body-bg: #aabde2;
+        --card-border: #5790df;
+        --muted: #9ca3af;
+        --text: #e5e7eb;
+        --row: #111827;
+      }
+    }
+
+    .sample-form {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+
+    .sample-form h3 {
+      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 12px !important;
+    }
+
+    .sample-form label {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .sample-form select,
+    .sample-form input[type="text"],
+    .sample-form input[type="number"] {
+      appearance: none;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      outline: none;
+      transition: box-shadow .2s ease, border-color .2s ease;
+    }
+    .sample-form select:focus,
+    .sample-form input[type="text"]:focus,
+    .sample-form input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    }
+
+    .sample-form table {
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--card-bg);
+      color: var(--text);
+    }
+    .sample-form thead th {
+      background: linear-gradient(180deg, rgba(37,99,235,0.08), rgba(37,99,235,0.02));
+      color: var(--text);
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .sample-form tbody tr:nth-child(odd) td { background: var(--row); }
+    .sample-form td, .sample-form th {
+      border-bottom: 1px solid var(--card-border);
+      padding: 10px 8px !important;
+      color: var(--text);
+    }
+    .sample-form tbody tr:last-child td { border-bottom: none; }
+
+    .sample-form .extract-button {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: transform .06s ease, background .2s ease, box-shadow .2s ease;
+      box-shadow: 0 6px 14px rgba(37,99,235,0.25);
+    }
+    .sample-form .extract-button:hover { background: var(--accent-hover); }
+    .sample-form .extract-button:active { transform: translateY(1px); }
+    .sample-form .extract-button[disabled] { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+
+    .preview-card {
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      border-radius: 12px;
+    }
+
+    /* Two-column layout for the sample demo */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    .col-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    /* Center page content */
+    html, body { height: 100%; }
+    body {
+      display: flex;
+      justify-content: center; /* horizontal center */
+      align-items: center;     /* vertical center */
+      min-height: 100vh;       /* full viewport height */
+      padding: 20px;
+      box-sizing: border-box;
+      background-color: var(--body-bg);
+      padding-left: 1%;
+      width: 100%;
+    }
+    .container {
+      width: 100%;
+      max-width: 1100px; /* adjust as desired */
+      margin: 0 auto;
+    }
+    #preview{
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Order Data Extractor For ShipStation</h2>
+      <div class="version">v1.2</div>
+    </div>
+    
+    <div class="main-content">
+      <div class="two-col">
+        <!-- Left column: sample inputs and actions -->
+        <div class="col-left">
+          <!-- Sample Data Entry Section -->
+          <div class="sample-form" style="margin-bottom: 16px;">
+            <h3 style="margin:8px 0;">Sample Carrier Request</h3>
+            <label for="carrierSelect" style="display:block; margin-bottom:8px;">Carrier</label>
+            <select id="carrierSelect" style="padding:6px 8px; margin-bottom:12px;">
+              <option value="FedEx">FedEx</option>
+              <option value="USPS">USPS</option>
+            </select>
+
+            <form id="sampleForm">
+              <table id="sampleTable" style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr>
+                    <th style="text-align:left; border-bottom:1px solid #ddd; padding:6px;">Field</th>
+                    <th style="text-align:left; border-bottom:1px solid #ddd; padding:6px;">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding:6px;">Date</td>
+                    <td style="padding:6px;"><input id="fld-date" name="date" type="text" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">Order Number</td>
+                    <td style="padding:6px;"><input id="fld-orderNumber" name="orderNumber" type="text" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">Recipient</td>
+                    <td style="padding:6px;"><input id="fld-recipient" name="recipient" type="text" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">Item Name</td>
+                    <td style="padding:6px;"><input id="fld-itemName" name="itemName" type="text" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">SKU</td>
+                    <td style="padding:6px;"><input id="fld-sku" name="sku" type="text" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">Quantity</td>
+                    <td style="padding:6px;"><input id="fld-quantity" name="quantity" type="number" min="1" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">Order Total ($)</td>
+                    <td style="padding:6px;"><input id="fld-orderTotal" name="orderTotal" type="number" step="0.01" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">Shipping Total ($)</td>
+                    <td style="padding:6px;"><input id="fld-shippingTotal" name="shippingTotal" type="number" step="0.01" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">Weight (lb)</td>
+                    <td style="padding:6px;"><input id="fld-weight" name="weight" type="text" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">Dimensions (LxWxH)</td>
+                    <td style="padding:6px;"><input id="fld-dimension" name="dimension" type="text" placeholder="e.g., 12x9x2" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">Shipping Cost</td>
+                    <td style="padding:6px;"><input id="fld-shipping" name="shipping" type="number" step="0.01" style="width:100%" /></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px;">Carrier (auto)</td>
+                    <td style="padding:6px;"><input id="fld-carrier" name="carrier" type="text" style="width:100%" readonly /></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div style="margin-top:12px; display:flex; gap:8px;">
+                <button type="button" id="loadSampleBtn" class="extract-button">Load Sample</button>
+                <button type="submit" id="submitSampleBtn" class="extract-button">Submit Sample</button>
+              </div>
+            </form>
+          </div>
+          <button id="extractBtn" class="extract-button">
+            <span class="button-icon">📋</span>
+            Extract & Copy Data
+          </button>
+          
+        </div>
+
+        <!-- Right column: status and preview -->
+        
+        <div class="col-right col-card">
+          <div id="status" class="status-container"></div>
+          <div id="preview" class="preview-container"></div>
+          <div class="info">
+            <p class="help-text">Click Extract to copy a tab-separated line that you can paste into Excel.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <div class="field-count">
+        <span class="label">Fields to extract:</span>
+        <span class="count">12</span>
+      </div>
+    </div>
+    <span id="Author">By Tenes <a href="https://github.com/Omar27522/ShipStation"title="ShipStation"> Github</a></span>
+  </div>
+  
+  <!-- Conditionally load popup.js only in extension context; otherwise wire a standalone copy flow -->
+  <script>
+    (function(){
+      const isExtensionCtx = (typeof chrome !== 'undefined' && chrome && chrome.tabs && typeof chrome.tabs.query === 'function');
+      if (isExtensionCtx) {
+        const s = document.createElement('script');
+        s.src = 'popup.js';
+        document.currentScript.parentNode.insertBefore(s, document.currentScript.nextSibling);
+      } else {
+        window.addEventListener('DOMContentLoaded', function(){
+          const extractBtn = document.getElementById('extractBtn');
+          const statusDiv = document.getElementById('status');
+          const previewDiv = document.getElementById('preview');
+
+          function gatherFormStandalone() {
+            const g = (id) => (document.getElementById(id)?.value ?? '');
+            return {
+              date: g('fld-date'),
+              orderNumber: g('fld-orderNumber'),
+              recipient: g('fld-recipient'),
+              itemName: g('fld-itemName'),
+              sku: g('fld-sku'),
+              quantity: g('fld-quantity'),
+              orderTotal: g('fld-orderTotal'),
+              shippingTotal: g('fld-shippingTotal'),
+              weight: g('fld-weight'),
+              dimension: g('fld-dimension'),
+              shipping: g('fld-shipping'),
+              carrier: g('fld-carrier')
+            };
+          }
+
+          function formatTSV(data) {
+            const values = [
+              data.date,
+              data.orderNumber,
+              data.recipient,
+              data.itemName,
+              data.sku,
+              data.quantity,
+              data.orderTotal,
+              data.shippingTotal,
+              data.weight,
+              data.dimension,
+              data.shipping,
+              data.carrier
+            ];
+            return values.join('\t');
+          }
+
+          function showSuccessStatusStandalone(successCount, totalFields) {
+            const percentage = Math.round((successCount / totalFields) * 100);
+            statusDiv.innerHTML = `
+              <div class="status success">
+                <span class="status-icon">✅</span>
+                <span class="status-text">Success! ${successCount}/${totalFields} fields prepared (${percentage}%)</span>
+              </div>
+              <div class="clipboard-notice">📋 Data copied to clipboard - ready to paste into Excel!</div>
+            `;
+          }
+
+          function renderPreviewStandalone(payload) {
+            const rows = Object.entries(payload)
+              .map(([k,v]) => `<tr><td style="padding:4px; border-bottom:1px solid #eee; font-weight:600;">${k}</td><td style="padding:4px; border-bottom:1px solid #eee;">${String(v || 'N/A')}</td></tr>`) 
+              .join('');
+            previewDiv.innerHTML = `<div class="preview-card" style="border:1px solid #ddd; border-radius:8px; padding:8px; margin-top:8px;">
+                <div style="font-weight:700; margin-bottom:6px;">Extracted Data Preview</div>
+                <table style="width:100%; border-collapse:collapse;">${rows}</table>
+              </div>`;
+          }
+
+          async function copyToClipboard(text) {
+            try {
+              await navigator.clipboard.writeText(text);
+            } catch (e) {
+              console.error('Clipboard copy failed', e);
+              // Fallback: create a temporary textarea
+              const ta = document.createElement('textarea');
+              ta.value = text;
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand('copy');
+              document.body.removeChild(ta);
+            }
+          }
+
+          if (extractBtn) {
+            extractBtn.addEventListener('click', async function(){
+              // Collect current form data
+              const data = gatherFormStandalone();
+              const totalFields = 12;
+              const successCount = Object.values(data).reduce((acc, v) => acc + ((v && v !== 'N/A') ? 1 : 0), 0);
+              const tsv = formatTSV(data);
+
+              // Copy to clipboard and update UI
+              await copyToClipboard(tsv);
+              showSuccessStatusStandalone(successCount, totalFields);
+              renderPreviewStandalone(data);
+            });
+          }
+        });
+      }
+    })();
+  </script>
+  <script>
+    (function() {
+      // Keep logic isolated to avoid collisions
+      const $ = (id) => document.getElementById(id);
+
+      const sampleData = {
+        FedEx: {
+          date: new Date().toLocaleDateString('en-US'),
+          orderNumber: 'FDX-100123',
+          recipient: 'FirstName LastName',
+          itemName: 'Laptop Computer',
+          sku: 'WM-200',
+          quantity: 1,
+          orderTotal: 39.99,
+          shippingTotal: 8.25,
+          weight: '2 lb 4 oz',
+          dimension: '10x7x4',
+          shipping: 12.5,
+          carrier: 'FedEx'
+        },
+        USPS: {
+          date: new Date().toLocaleDateString('en-US'),
+          orderNumber: 'USPS-550789',
+          recipient: 'FirstName LastName',
+          itemName: 'Notebook Lot',
+          sku: 'NT-SET-3',
+          quantity: 2,
+          orderTotal: 24.5,
+          shippingTotal: 4.75,
+          weight: '100 lb 2 oz',
+          dimension: '22x16x7',
+          shipping: 6.3,
+          carrier: 'USPS'
+        }
+      };
+
+      function fillForm(data) {
+        $('fld-date').value = data.date ?? '';
+        $('fld-orderNumber').value = data.orderNumber ?? '';
+        $('fld-recipient').value = data.recipient ?? '';
+        $('fld-itemName').value = data.itemName ?? '';
+        $('fld-sku').value = data.sku ?? '';
+        $('fld-quantity').value = data.quantity ?? '';
+        $('fld-orderTotal').value = data.orderTotal ?? '';
+        $('fld-shippingTotal').value = data.shippingTotal ?? '';
+        $('fld-weight').value = data.weight ?? '';
+        $('fld-dimension').value = data.dimension ?? '';
+        $('fld-shipping').value = data.shipping ?? '';
+        $('fld-carrier').value = data.carrier ?? '';
+      }
+
+      function gatherForm() {
+        return {
+          date: $('fld-date').value,
+          orderNumber: $('fld-orderNumber').value,
+          recipient: $('fld-recipient').value,
+          itemName: $('fld-itemName').value,
+          sku: $('fld-sku').value,
+          quantity: $('fld-quantity').value,
+          orderTotal: $('fld-orderTotal').value,
+          shippingTotal: $('fld-shippingTotal').value,
+          weight: $('fld-weight').value,
+          dimension: $('fld-dimension').value,
+          shipping: $('fld-shipping').value,
+          carrier: $('fld-carrier').value
+        };
+      }
+
+      function renderPreview(payload) {
+        const preview = document.getElementById('preview');
+        if (!preview) return;
+        const rows = Object.entries(payload).map(([k,v]) => `<tr><td style="padding:4px; border-bottom:1px solid #eee; font-weight:600;">${k}</td><td style="padding:4px; border-bottom:1px solid #eee;">${String(v)}</td></tr>`).join('');
+        preview.innerHTML = `<div class="preview-card" style="border:1px solid #ddd; border-radius:8px; padding:8px; margin-top:8px;">
+            <div style="font-weight:700; margin-bottom:6px;">Submitted Sample Payload</div>
+            <table style="width:100%; border-collapse:collapse;">${rows}</table>
+          </div>`;
+      }
+
+      function syncCarrierField() {
+        const carrier = document.getElementById('carrierSelect').value;
+        document.getElementById('fld-carrier').value = carrier;
+      }
+
+      // Event wiring
+      document.getElementById('carrierSelect').addEventListener('change', () => {
+        const carrier = document.getElementById('carrierSelect').value;
+        fillForm(sampleData[carrier]);
+      });
+
+      document.getElementById('loadSampleBtn').addEventListener('click', () => {
+        const carrier = document.getElementById('carrierSelect').value;
+        fillForm(sampleData[carrier]);
+      });
+
+      document.getElementById('sampleForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        syncCarrierField();
+        const payload = gatherForm();
+        console.log('Submitting sample payload:', payload);
+        renderPreview(payload);
+      });
+
+      // Initialize with default selection
+      syncCarrierField();
+      fillForm(sampleData[document.getElementById('carrierSelect').value]);
+    })();
+  </script>
+</body>
+</html>
