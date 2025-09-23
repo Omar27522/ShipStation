@@ -1,0 +1,13 @@
+{
+    "name": "excel-reader-php",
+    "description": "Excel file reader using PHP and SQLite",
+    "require": {
+        "php": ">=7.4",
+        "phpoffice/phpspreadsheet": "^1.29"
+    },
+    "autoload": {
+        "psr-4": {
+            "ExcelReader\\": "src/"
+        }
+    }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "excel-reader",
+  "version": "1.0.0",
+  "description": "A simple Excel file reader using SheetJS",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "serve": "npx http-server -p 3000"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
