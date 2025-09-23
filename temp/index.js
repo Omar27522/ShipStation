@@ -1,6 +1,7 @@
 const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
+const ExcelDatabase = require('./database');
 
 function readExcelFile(filePath) {
     try {
@@ -67,20 +68,96 @@ function readExcelFile(filePath) {
     }
 }
 
-// Main execution
-const excelFilePath = path.join(__dirname, '9232025.xlsx');
-const data = readExcelFile(excelFilePath);
-
-if (data) {
-    console.log('\n=== Excel File Summary ===');
-    Object.keys(data).forEach(sheetName => {
-        const sheet = data[sheetName];
-        console.log(`Sheet "${sheetName}": ${sheet.rowCount} rows, ${sheet.columnCount} columns`);
-    });
+// Database operations
+async function saveToDatabase(data, filename, filepath) {
+    const db = new ExcelDatabase();
     
-    // Save data to JSON file for web viewing
-    fs.writeFileSync('excel-data.json', JSON.stringify(data, null, 2));
-    console.log('\nData saved to excel-data.json for web viewing');
-} else {
-    console.log('Failed to read Excel file');
+    try {
+        await db.connect();
+        await db.createTables();
+        
+        const fileId = await db.saveExcelData(filename, filepath, data);
+        
+        // Get and display database stats
+        const stats = await db.getStats();
+        console.log('\n=== Database Statistics ===');
+        console.log(`Total files in database: ${stats.files}`);
+        console.log(`Total sheets in database: ${stats.sheets}`);
+        console.log(`Total data records in database: ${stats.dataRecords}`);
+        
+        await db.close();
+        return fileId;
+        
+    } catch (error) {
+        console.error('Database operation failed:', error.message);
+        await db.close();
+        throw error;
+    }
 }
+
+// Function to list all files in database
+async function listDatabaseFiles() {
+    const db = new ExcelDatabase();
+    
+    try {
+        await db.connect();
+        const files = await db.getAllFiles();
+        
+        console.log('\n=== Files in Database ===');
+        if (files.length === 0) {
+            console.log('No files found in database');
+        } else {
+            files.forEach(file => {
+                console.log(`ID: ${file.id}, File: ${file.filename}, Sheets: ${file.sheet_count}, Rows: ${file.total_rows}, Created: ${file.created_at}`);
+            });
+        }
+        
+        await db.close();
+        return files;
+        
+    } catch (error) {
+        console.error('Error listing database files:', error.message);
+        await db.close();
+        throw error;
+    }
+}
+
+// Main execution
+async function main() {
+    const excelFilePath = path.join(__dirname, '9232025.xlsx');
+    const data = readExcelFile(excelFilePath);
+
+    if (data) {
+        console.log('\n=== Excel File Summary ===');
+        Object.keys(data).forEach(sheetName => {
+            const sheet = data[sheetName];
+            console.log(`Sheet "${sheetName}": ${sheet.rowCount} rows, ${sheet.columnCount} columns`);
+        });
+        
+        // Save data to JSON file for web viewing
+        fs.writeFileSync('excel-data.json', JSON.stringify(data, null, 2));
+        console.log('\nData saved to excel-data.json for web viewing');
+        
+        // Save data to SQLite database
+        try {
+            console.log('\n=== Saving to Database ===');
+            const fileId = await saveToDatabase(data, '9232025.xlsx', excelFilePath);
+            console.log(`✅ Data successfully saved to database with file ID: ${fileId}`);
+            
+            // List all files in database
+            await listDatabaseFiles();
+            
+        } catch (error) {
+            console.error('❌ Failed to save to database:', error.message);
+        }
+        
+    } else {
+        console.log('Failed to read Excel file');
+    }
+}
+
+// Run the main function
+main().catch(error => {
+    console.error('Application error:', error.message);
+    process.exit(1);
+});

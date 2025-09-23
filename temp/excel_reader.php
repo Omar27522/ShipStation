@@ -1,5 +1,10 @@
 <?php
-require_once 'vendor/autoload.php';
+// Composer autoload (absolute path for reliability)
+$autoloadPath = __DIR__ . '/vendor/autoload.php';
+if (!file_exists($autoloadPath)) {
+    throw new Exception("Composer autoload not found. Please run 'composer install' in " . __DIR__);
+}
+require_once $autoloadPath;
 require_once 'database.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;

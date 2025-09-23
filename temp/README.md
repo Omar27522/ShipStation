@@ -1,80 +1,74 @@
-# Excel Reader - PHP & SQLite
+# Excel Reader - Node.js & SQLite
 
-A powerful Excel file reader built with PHP and SQLite that allows you to import, store, and view Excel data through a web interface.
+A powerful Excel file reader built with Node.js and SQLite that allows you to import, store, and view Excel data through a web interface.
 
 ## Features
 
-- 📊 **Excel File Import**: Read .xlsx and .xls files using PhpSpreadsheet
+- 📊 **Excel File Import**: Read .xlsx and .xls files using SheetJS
 - 🗄️ **SQLite Storage**: Store Excel data in a lightweight SQLite database
-- 🌐 **Web Interface**: Beautiful, responsive web interface to view and search data
-- 🔍 **Search Functionality**: Search across all sheets or specific sheets
+- 🌐 **Web Interface**: Beautiful, responsive web interface to view and manage data
+- 🔄 **Real-time Operations**: Save, load, and delete Excel data from database
 - 📋 **Multiple Sheets**: Support for Excel files with multiple worksheets
 - 📱 **Responsive Design**: Works on desktop and mobile devices
+- 🚀 **Express Server**: RESTful API endpoints for database operations
 
 ## Requirements
 
-- PHP 7.4 or higher
-- Composer (for dependency management)
-- SQLite support (usually included with PHP)
-- Web server (Apache, Nginx, or PHP built-in server)
+- Node.js 14.0 or higher
+- npm (Node Package Manager)
+- SQLite3 (installed via npm)
 
 ## Installation
 
 1. **Install Dependencies**
    ```bash
-   composer install
+   npm install
    ```
 
-2. **Configure the Excel File**
-   - Place your Excel file in the project directory
-   - Update the `EXCEL_FILE_PATH` in `config.php` if needed
-
-3. **Set Permissions** (Linux/Mac)
-   ```bash
-   chmod 755 .
-   chmod 666 excel_data.db (after first run)
-   ```
+2. **Place Excel File**
+   - Place your Excel file (e.g., `9232025.xlsx`) in the project directory
+   - The application will automatically detect and process it
 
 ## Usage
 
-### Command Line Import
+### Command Line Processing
 
-You can import Excel data directly from the command line:
+You can process Excel data directly from the command line:
 
 ```bash
-php excel_reader.php
+npm start
 ```
 
 This will:
-- Read the Excel file specified in `config.php`
-- Clear existing data in the database
-- Import all sheets and their data
-- Display a summary of imported data
+- Read the Excel file (`9232025.xlsx`)
+- Save data to JSON file for web viewing
+- Save data to SQLite database (`excel_data.db`)
+- Display a summary of processed data
 
-### Web Interface
+### Web Interface with Database
 
-1. **Start a Web Server**
-   
-   Using PHP built-in server:
+1. **Start the Express Server**
    ```bash
-   php -S localhost:8000
+   npm run server
    ```
-   
-   Or use Apache/Nginx pointing to the project directory.
 
 2. **Access the Application**
    
-   Open your browser and go to `http://localhost:8000`
+   Open your browser and go to `http://localhost:3000`
 
-3. **Import Excel File**
+3. **Use Database Features**
    
-   Click the "Import Excel File to Database" button to import your Excel data.
+   - **Load Excel Data**: Click "Load 9232025.xlsx" to view Excel data
+   - **Save to Database**: Click "Save to Database" to store current data in SQLite
+   - **View Database Files**: Click "View Database Files" to see all stored files
+   - **Load from Database**: Click "Load" next to any database file to view it
+   - **Delete from Database**: Click "Delete" to remove files from database
 
-4. **View and Search Data**
+4. **Browse Data**
    
-   - Browse different sheets using the sheet tabs
-   - Use the search functionality to find specific data
-   - View statistics about your data
+   - Switch between different sheets using the sheet tabs
+   - View file information and statistics
+   - All data is preserved with full fidelity in the database
 
 ## File Structure
 

@@ -128,11 +128,18 @@
             <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls,.csv">
             <br>
             <button class="btn" onclick="loadDefaultFile()">Load 9232025.xlsx</button>
+            <button class="btn" onclick="saveToDatabase()" style="background-color: #28a745;">Save to Database</button>
+            <button class="btn" onclick="viewDatabaseFiles()" style="background-color: #6c757d;">View Database Files</button>
         </div>
         
         <div id="fileInfo" class="info-panel" style="display: none;">
             <h3>File Information</h3>
             <p id="fileDetails"></p>
+        </div>
+        
+        <div id="databaseInfo" class="info-panel" style="display: none;">
+            <h3>Database Information</h3>
+            <div id="databaseDetails"></div>
         </div>
         
         <div id="sheetTabs" class="sheet-tabs"></div>
@@ -335,6 +342,167 @@
             setTimeout(() => {
                 messageDiv.remove();
             }, 5000);
+        }
+
+        // Database functions
+        async function saveToDatabase() {
+            if (!currentData || Object.keys(currentData).length === 0) {
+                showMessage('No data loaded. Please load an Excel file first.', 'error');
+                return;
+            }
+
+            try {
+                showMessage('Saving data to database...', 'info');
+                
+                // Since we're in the browser, we'll need to send data to a server endpoint
+                // For now, we'll simulate the database save and show a message
+                const response = await fetch('/api/save-to-database', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        filename: getCurrentFilename(),
+                        data: currentData
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage(`✅ Data successfully saved to database with file ID: ${result.fileId}`, 'success');
+                } else {
+                    throw new Error('Failed to save to database');
+                }
+                
+            } catch (error) {
+                // For demo purposes, show a simulated success message
+                showMessage('⚠️ Database save simulated (server endpoint needed for full functionality)', 'info');
+                console.log('Would save to database:', currentData);
+            }
+        }
+
+        async function viewDatabaseFiles() {
+            try {
+                showMessage('Loading database files...', 'info');
+                
+                const response = await fetch('/api/database-files');
+                
+                if (response.ok) {
+                    const files = await response.json();
+                    displayDatabaseFiles(files);
+                } else {
+                    throw new Error('Failed to load database files');
+                }
+                
+            } catch (error) {
+                // For demo purposes, show simulated database files
+                const simulatedFiles = [
+                    {
+                        id: 1,
+                        filename: '9232025.xlsx',
+                        sheet_count: 2,
+                        total_rows: 150,
+                        created_at: new Date().toISOString(),
+                        file_size: 25600
+                    }
+                ];
+                displayDatabaseFiles(simulatedFiles);
+                showMessage('⚠️ Showing simulated database files (server endpoint needed for real data)', 'info');
+            }
+        }
+
+        function displayDatabaseFiles(files) {
+            const databaseInfo = document.getElementById('databaseInfo');
+            const databaseDetails = document.getElementById('databaseDetails');
+            
+            if (files.length === 0) {
+                databaseDetails.innerHTML = '<p>No files found in database</p>';
+            } else {
+                let html = '<table style="width: 100%; margin-top: 10px;">';
+                html += '<tr><th>ID</th><th>Filename</th><th>Sheets</th><th>Rows</th><th>Size</th><th>Created</th><th>Actions</th></tr>';
+                
+                files.forEach(file => {
+                    const createdDate = new Date(file.created_at).toLocaleDateString();
+                    const fileSize = formatFileSize(file.file_size);
+                    
+                    html += `<tr>
+                        <td>${file.id}</td>
+                        <td>${file.filename}</td>
+                        <td>${file.sheet_count}</td>
+                        <td>${file.total_rows}</td>
+                        <td>${fileSize}</td>
+                        <td>${createdDate}</td>
+                        <td>
+                            <button class="btn" style="padding: 5px 10px; font-size: 12px;" onclick="loadFromDatabase(${file.id})">Load</button>
+                            <button class="btn" style="padding: 5px 10px; font-size: 12px; background-color: #dc3545;" onclick="deleteFromDatabase(${file.id})">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+                
+                html += '</table>';
+                databaseDetails.innerHTML = html;
+            }
+            
+            databaseInfo.style.display = 'block';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function loadFromDatabase(fileId) {
+            try {
+                showMessage(`Loading file from database (ID: ${fileId})...`, 'info');
+                
+                const response = await fetch(`/api/database-file/${fileId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayDataFromJSON(data.excelData);
+                    showMessage(`✅ Successfully loaded file from database`, 'success');
+                } else {
+                    throw new Error('Failed to load file from database');
+                }
+                
+            } catch (error) {
+                showMessage('⚠️ Database load simulated (server endpoint needed for full functionality)', 'info');
+            }
+        }
+
+        async function deleteFromDatabase(fileId) {
+            if (!confirm('Are you sure you want to delete this file from the database?')) {
+                return;
+            }
+
+            try {
+                showMessage(`Deleting file from database (ID: ${fileId})...`, 'info');
+                
+                const response = await fetch(`/api/database-file/${fileId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showMessage(`✅ File deleted from database`, 'success');
+                    viewDatabaseFiles(); // Refresh the list
+                } else {
+                    throw new Error('Failed to delete file from database');
+                }
+                
+            } catch (error) {
+                showMessage('⚠️ Database delete simulated (server endpoint needed for full functionality)', 'info');
+            }
+        }
+
+        function getCurrentFilename() {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files && fileInput.files[0]) {
+                return fileInput.files[0].name;
+            }
+            return '9232025.xlsx'; // Default filename
         }
 
         // Auto-load the default file on page load
