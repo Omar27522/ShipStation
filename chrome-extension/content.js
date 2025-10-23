@@ -145,12 +145,82 @@
   // Extract Quantity
   extractQuantity() {
     try {
-      const quantityElement = document.querySelector('.h3-q6GsezA.quantity-text-UmGFNkF');
+      // Try primary selector
+      let quantityElement = document.querySelector('.h3-q6GsezA.quantity-text-UmGFNkF');
+      
+      // If not found, try alternative selectors
+      if (!quantityElement) {
+        quantityElement = document.querySelector('[class*="quantity"]');
+      }
+      
+      // Try looking for quantity in item details section
+      if (!quantityElement) {
+        const itemSections = document.querySelectorAll('[class*="item"]');
+        for (let section of itemSections) {
+          const text = section.textContent.toLowerCase();
+          if (text.includes('qty') || text.includes('quantity')) {
+            // Look for a number near the qty label
+            const numberMatch = section.textContent.match(/(?:qty|quantity)[:\s]*([0-9]+)/i);
+            if (numberMatch) {
+              console.log('Quantity found via item section:', numberMatch[1]);
+              return parseInt(numberMatch[1], 10);
+            }
+          }
+        }
+      }
+      
+      // Try looking for quantity in order details
+      if (!quantityElement) {
+        const allDivs = document.querySelectorAll('div');
+        for (let div of allDivs) {
+          const text = div.textContent.trim();
+          // Look for patterns like "Qty: 2" or "Quantity: 2"
+          const match = text.match(/(?:qty|quantity)[:\s]*([0-9]+)/i);
+          if (match && div.children.length < 5) { // Avoid large containers
+            console.log('Quantity found via pattern match:', match[1]);
+            return parseInt(match[1], 10);
+          }
+        }
+      }
+      
+      // If still not found, search for text containing "Qty" or "Quantity"
+      if (!quantityElement) {
+        const allElements = document.querySelectorAll('*');
+        for (let el of allElements) {
+          const text = el.textContent.trim();
+          if (text.match(/^\d+$/) && el.textContent.length < 10) {
+            // Check if nearby text contains "Qty" or "Quantity"
+            const parent = el.parentElement;
+            if (parent && parent.textContent.toLowerCase().includes('qty')) {
+              quantityElement = el;
+              break;
+            }
+          }
+        }
+      }
+      
       if (quantityElement) {
         const text = quantityElement.textContent.trim();
         const match = text.match(/\d+/);
-        return match ? match[0] : 'N/A';
+        if (match) {
+          console.log('Quantity found:', match[0], 'Element:', quantityElement);
+          return parseInt(match[0], 10);
+        }
       }
+      
+      // Log diagnostic info
+      console.warn('Quantity not found on page');
+      console.log('Diagnostic - Elements with "quantity" in class:', document.querySelectorAll('[class*="quantity"]').length);
+      document.querySelectorAll('[class*="quantity"]').forEach((el, idx) => {
+        console.log(`  [${idx}]`, el.className, ':', el.textContent.trim().substring(0, 50));
+      });
+      console.log('Diagnostic - All divs containing "qty":', document.querySelectorAll('div').length);
+      document.querySelectorAll('div').forEach((el, idx) => {
+        if (el.textContent.toLowerCase().includes('qty')) {
+          console.log(`  DIV[${idx}] with qty:`, el.className, ':', el.textContent.trim().substring(0, 100));
+        }
+      });
+      
       return 'N/A';
     } catch (error) {
       console.warn('Error extracting quantity:', error);
@@ -159,13 +229,28 @@
   }
 
   // Extract Order Total (Price)
-  extractOrderTotal() {
+  extractOrderTotal(quantity) {
+    console.log('extractOrderTotal called with quantity:', quantity);
     try {
       const priceElement = document.querySelector('.description-qbJBh2Z');
+      console.log('Price element found:', !!priceElement, 'Text content:', priceElement?.textContent);
       if (priceElement) {
         const text = priceElement.textContent;
         const match = text.match(/\$([0-9,]+\.?\d*)/);
-        return match ? match[1].replace(/,/g, '') : 'N/A';
+        console.log('Regex match result:', match);
+        if (match) {
+          const unitPrice = parseFloat(match[1].replace(/,/g, ''));
+          const qty = parseFloat(quantity);
+          console.log('Order Total Debug - Unit Price:', unitPrice, 'Quantity:', qty, 'Quantity param:', quantity, 'Type of qty:', typeof qty);
+          console.log('isNaN(unitPrice):', isNaN(unitPrice), 'isNaN(qty):', isNaN(qty), 'qty > 0:', qty > 0);
+          if (!isNaN(unitPrice) && !isNaN(qty) && qty > 0) {
+            const totalPrice = unitPrice * qty;
+            console.log('Calculated total:', totalPrice);
+            return Math.round(totalPrice * 100) / 100;
+          }
+          console.log('Returning unit price only:', match[1].replace(/,/g, ''));
+          return match[1].replace(/,/g, '');
+        }
       }
       return 'N/A';
     } catch (error) {
@@ -333,14 +418,17 @@
   extractAllData() {
     console.log('Starting data extraction...');
     
+    const quantity = this.extractQuantity();
+    console.log('About to call extractOrderTotal with quantity:', quantity);
+    
     this.data = {
       date: this.getTodaysDate(),
       orderNumber: this.extractOrderNumber(),
       recipient: this.extractRecipient(),
       itemName: this.extractItemName(),
       sku: this.extractSKU(),
-      quantity: this.extractQuantity(),
-      orderTotal: this.extractOrderTotal(),
+      quantity: quantity,
+      orderTotal: this.extractOrderTotal(quantity),
       shippingTotal: this.extractShippingTotal(),
       weight: this.extractWeight(),
       dimension: this.extractDimension(),
