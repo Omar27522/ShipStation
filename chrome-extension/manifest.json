@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Order Data Extractor",
-  "version": "1.1",
+  "version": "1.0",
   "description": "Extract order/shipment data for Excel import",
   "permissions": [
     "activeTab",
@@ -9,27 +9,21 @@
     "scripting"
   ],
   "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icons/apple-touch-icon.png",
-      "48": "icons/apple-touch-icon.png",
-      "128": "icons/apple-touch-icon.png"
-    }
+    "default_popup": "popup.html"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_end",
       "all_frames": false
     }
   ],
   "background": {
     "service_worker": "background.js"
-  },
-  "icons": {
-    "16": "icons/apple-touch-icon.png",
-    "48": "icons/apple-touch-icon.png",
-    "128": "icons/apple-touch-icon.png"
   }
 }

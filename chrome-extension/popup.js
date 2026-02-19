@@ -1,23 +1,23 @@
 // Order Data Extractor - Popup Script
 // Handles UI interactions and communication with content script
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   const extractBtn = document.getElementById('extractBtn');
   const statusDiv = document.getElementById('status');
   const previewDiv = document.getElementById('preview');
 
   // Extract button click handler
-  extractBtn.addEventListener('click', async function() {
+  extractBtn.addEventListener('click', async function () {
     console.log('Extract button clicked');
-    
+
     // Update UI to show loading state
     setLoadingState();
-    
+
     try {
       // Get current active tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       console.log('Current tab:', tab);
-      
+
       // Try to inject content script if not already loaded
       try {
         await chrome.scripting.executeScript({
@@ -28,31 +28,37 @@ document.addEventListener('DOMContentLoaded', function() {
       } catch (injectionError) {
         console.log('Content script already loaded or injection failed:', injectionError.message);
       }
-      
+
       // Wait a moment for script to initialize
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Send message to content script
       console.log('Sending message to content script...');
       const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractData' });
       console.log('Received response:', response);
-      
+
       if (response && response.success) {
         // Copy to clipboard
         await copyToClipboard(response.formatted);
-        
+
+        // Update bottom footer count if available
+        const countSpan = document.querySelector('.count');
+        if (countSpan) {
+          countSpan.textContent = response.totalFields;
+        }
+
         // Show success status
         showSuccessStatus(response.successCount, response.totalFields);
-        
+
         // Show preview of extracted data
         showPreview(response.data);
-        
+
       } else if (response && !response.success) {
         showErrorStatus('Extraction failed: ' + (response.error || 'Unknown error'));
       } else {
         showErrorStatus('No response from content script. Make sure you are on a web page (not chrome:// or extension pages).');
       }
-      
+
     } catch (error) {
       console.error('Error during extraction:', error);
       if (error.message.includes('Could not establish connection')) {
@@ -61,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showErrorStatus('Error: ' + error.message);
       }
     }
-    
+
     // Reset button state
     resetButtonState();
   });
@@ -94,11 +100,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Show success status
   function showSuccessStatus(successCount, totalFields) {
     const percentage = Math.round((successCount / totalFields) * 100);
-    
+
     let statusClass = 'success';
     let statusIcon = '✅';
     let statusText = `Success! ${successCount}/${totalFields} fields extracted (${percentage}%)`;
-    
+
     if (successCount < totalFields) {
       if (successCount >= totalFields * 0.7) {
         statusClass = 'warning';
@@ -110,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusText = `Limited data: Only ${successCount}/${totalFields} fields extracted (${percentage}%)`;
       }
     }
-    
+
     statusDiv.innerHTML = `
       <div class="status ${statusClass}">
         <span class="status-icon">${statusIcon}</span>
@@ -136,41 +142,54 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Show preview of extracted data
-  function showPreview(data) {
-    const fields = [
-      { label: 'Date', value: data.date },
-      { label: 'Order #', value: data.orderNumber },
-      { label: 'Recipient', value: data.recipient },
-      { label: 'Item Name', value: data.itemName },
-      { label: 'SKU', value: data.sku },
-      { label: 'Quantity', value: data.quantity },
-      { label: 'Order Total', value: data.orderTotal },
-      { label: 'Shipping Total', value: data.shippingTotal },
-      { label: 'Weight', value: data.weight },
-      { label: 'Dimension', value: data.dimension },
-      { label: 'Shipping', value: data.shipping },
-      { label: 'Carrier', value: data.carrier }
-    ];
+  function showPreview(dataArray) {
+    if (!Array.isArray(dataArray)) {
+      dataArray = [dataArray];
+    }
 
-    let previewHTML = '<div class="preview-header">📋 Extracted Data Preview:</div>';
-    previewHTML += '<div class="field-list">';
-    
-    fields.forEach(field => {
-      const isFound = field.value && field.value !== 'N/A';
-      const statusIcon = isFound ? '✅' : '❌';
-      const fieldClass = isFound ? 'found' : 'missing';
-      const displayValue = field.value || 'N/A';
-      
-      previewHTML += `
-        <div class="field-item ${fieldClass}">
-          <span class="field-status">${statusIcon}</span>
-          <span class="field-label">${field.label}:</span>
-          <span class="field-value">${displayValue}</span>
-        </div>
-      `;
+    let previewHTML = `<div class="preview-header">📋 Extracted Data Preview (${dataArray.length} item${dataArray.length > 1 ? 's' : ''}):</div>`;
+
+    dataArray.forEach((data, index) => {
+      if (dataArray.length > 1) {
+        previewHTML += `<div style="font-weight: 600; font-size: 12px; color: #667eea; margin: 8px 0 4px;">Item ${index + 1}</div>`;
+      }
+
+      const fields = [
+        { label: 'Date', value: data.date },
+        { label: 'Time', value: data.time },
+        { label: 'Order #', value: data.orderNumber },
+        { label: 'Recipient', value: data.recipient },
+        { label: 'Item Name', value: data.itemName },
+        { label: 'SKU', value: data.sku },
+        { label: 'Quantity', value: data.quantity },
+        { label: 'Order Total', value: data.orderTotal },
+        { label: 'Shipping Total', value: data.shippingTotal },
+        { label: 'Weight', value: data.weight },
+        { label: 'Dimension', value: data.dimension },
+        { label: 'Shipping', value: data.shipping },
+        { label: 'Carrier', value: data.carrier }
+      ];
+
+      previewHTML += '<div class="field-list" style="margin-bottom: 8px;">';
+
+      fields.forEach(field => {
+        const isFound = field.value && field.value !== 'N/A';
+        const statusIcon = isFound ? '✅' : '❌';
+        const fieldClass = isFound ? 'found' : 'missing';
+        const displayValue = field.value || 'N/A';
+
+        previewHTML += `
+          <div class="field-item ${fieldClass}">
+            <span class="field-status">${statusIcon}</span>
+            <span class="field-label">${field.label}:</span>
+            <span class="field-value">${displayValue}</span>
+          </div>
+        `;
+      });
+
+      previewHTML += '</div>';
     });
-    
-    previewHTML += '</div>';
+
     previewDiv.innerHTML = previewHTML;
   }
 });
