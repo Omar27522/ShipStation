@@ -113,7 +113,7 @@ if (typeof window.OrderDataExtractor === 'undefined') {
     // Extract Item Name (Legacy fallback)
     extractItemName() {
       try {
-        const itemElement = document.querySelector('button[class*="item-name-"]');
+        const itemElement = document.querySelector('[class*="item-name-"]');
         if (itemElement) {
           return itemElement.textContent.trim();
         }
@@ -127,7 +127,7 @@ if (typeof window.OrderDataExtractor === 'undefined') {
     // Extract SKU (Legacy fallback)
     extractSKU() {
       try {
-        const skuElement = document.querySelector('div[class*="item-sku-"]');
+        const skuElement = document.querySelector('[class*="item-sku-"]:not([class*="with-order-number"])');
         if (skuElement) {
           let sku = skuElement.textContent.trim();
           // Remove "SKU:" prefix if present
@@ -144,7 +144,7 @@ if (typeof window.OrderDataExtractor === 'undefined') {
     // Extract Quantity (Legacy fallback)
     extractQuantity() {
       try {
-        const quantityElement = document.querySelector('p[class*="quantity-text-"]');
+        const quantityElement = document.querySelector('[class*="quantity-text-"]');
         if (quantityElement) {
           const text = quantityElement.textContent.trim();
           const match = text.match(/\d+/);
@@ -162,7 +162,7 @@ if (typeof window.OrderDataExtractor === 'undefined') {
       try {
         const items = [];
         // Look for table rows containing items
-        const rows = document.querySelectorAll('div[class*="react-table-body-row-"]');
+        const rows = document.querySelectorAll('[class*="react-table-body-row-"]');
 
         if (rows && rows.length > 0) {
           for (let row of rows) {
@@ -170,11 +170,12 @@ if (typeof window.OrderDataExtractor === 'undefined') {
             let sku = 'N/A';
             let quantity = 'N/A';
             let itemOrderNumber = null;
+            let itemTotal = null;
 
-            const nameEl = row.querySelector('button[class*="item-name-"]');
+            const nameEl = row.querySelector('[class*="item-name-"]');
             if (nameEl) itemName = nameEl.textContent.trim();
 
-            const skuEl = row.querySelector('div[class*="item-sku-with-order-number-"], div[class*="item-sku-"]');
+            const skuEl = row.querySelector('[class*="item-sku-with-order-number-"], [class*="item-sku-"]');
             if (skuEl) {
               let skuText = skuEl.textContent.trim();
 
@@ -189,24 +190,30 @@ if (typeof window.OrderDataExtractor === 'undefined') {
               sku = skuText.replace(/^SKU:\s*/i, '');
             }
 
-            const qtyEl = row.querySelector('p[class*="quantity-text-"]');
+            const qtyEl = row.querySelector('[aria-labelledby="quantity"]');
             if (qtyEl) {
               const match = qtyEl.textContent.trim().match(/\d+/);
               if (match) quantity = match[0];
             }
 
+            const costEl = row.querySelector('[aria-labelledby="costTotal"]') || row.querySelector('[aria-labelledby="unitPrice"]');
+            if (costEl) {
+              const match = costEl.textContent.trim().match(/\$([0-9,]+\.?\d*)/);
+              if (match) itemTotal = match[1].replace(/,/g, '');
+            }
+
             // Only add if it's uniquely an item row (has a name or sku)
             if (itemName !== 'N/A' || sku !== 'N/A') {
-              items.push({ itemName, sku, quantity, itemOrderNumber });
+              items.push({ itemName, sku, quantity, itemOrderNumber, itemTotal });
             }
           }
         }
 
         // If we couldn't find rows or they didn't have items, try the fallback
         if (items.length === 0) {
-          const names = document.querySelectorAll('button[class*="item-name-"]');
-          const skus = document.querySelectorAll('div[class*="item-sku-"]:not([class*="with-order-number"])');
-          const qtys = document.querySelectorAll('p[class*="quantity-text-"]');
+          const names = document.querySelectorAll('[class*="item-name-"]');
+          const skus = document.querySelectorAll('[class*="item-sku-"]:not([class*="with-order-number"])');
+          const qtys = document.querySelectorAll('[class*="quantity-text-"]');
 
           const count = Math.max(names.length, 1);
           for (let i = 0; i < count; i++) {
@@ -222,22 +229,35 @@ if (typeof window.OrderDataExtractor === 'undefined') {
             }
 
             if (itemName !== 'N/A' || sku !== 'N/A') {
-              items.push({ itemName, sku, quantity, itemOrderNumber: null });
+              items.push({ itemName, sku, quantity, itemOrderNumber: null, itemTotal: null });
             }
           }
         }
 
-        return items.length > 0 ? items : [{ itemName: 'N/A', sku: 'N/A', quantity: 'N/A', itemOrderNumber: null }];
+        return items.length > 0 ? items : [{ itemName: 'N/A', sku: 'N/A', quantity: 'N/A', itemOrderNumber: null, itemTotal: null }];
       } catch (error) {
         console.warn('Error extracting items list:', error);
-        return [{ itemName: this.extractItemName(), sku: this.extractSKU(), quantity: this.extractQuantity(), itemOrderNumber: null }];
+        return [{ itemName: this.extractItemName(), sku: this.extractSKU(), quantity: this.extractQuantity(), itemOrderNumber: null, itemTotal: null }];
       }
     }
 
     // Extract Order Total (Price)
     extractOrderTotal() {
       try {
-        const priceElement = document.querySelector('.description-qbJBh2Z');
+        // 1) Reliable approach: find the "Total" summary row at the bottom
+        const summaryLabels = document.querySelectorAll('[class*="amount-summary-row-label-"]');
+        for (let label of summaryLabels) {
+          if (label.textContent.includes('Total') && !label.textContent.includes('Shipping')) {
+            const nextDiv = label.nextElementSibling;
+            if (nextDiv) {
+              const match = nextDiv.textContent.match(/\$([0-9,]+\.?\d*)/);
+              if (match) return match[1].replace(/,/g, '');
+            }
+          }
+        }
+
+        // 2) Fallback: get the very first span looking like a price description
+        const priceElement = document.querySelector('[class*="description-qbJBh2Z"], [class*="description-"]');
         if (priceElement) {
           const text = priceElement.textContent;
           const match = text.match(/\$([0-9,]+\.?\d*)/);
@@ -254,7 +274,7 @@ if (typeof window.OrderDataExtractor === 'undefined') {
     extractShippingTotal() {
       try {
         // Find label with "Shipping" text
-        const shippingLabels = document.querySelectorAll('.amount-summary-row-label-Peq42k9');
+        const shippingLabels = document.querySelectorAll('[class*="amount-summary-row-label-"]');
         for (let label of shippingLabels) {
           if (label.textContent.includes('Shipping')) {
             // Find the adjacent div with the price
@@ -276,10 +296,10 @@ if (typeof window.OrderDataExtractor === 'undefined') {
     // Extract Weight
     extractWeight() {
       try {
-        const labels = document.querySelectorAll('.label-Pg0dC8r.field-label-xuTxiUg');
+        const labels = document.querySelectorAll('[class*="label-"]');
         for (let label of labels) {
           if (label.textContent.includes('Weight')) {
-            const valueSpan = label.parentElement.querySelector('.readonly-value-iLmxDlc');
+            const valueSpan = label.parentElement.querySelector('[class*="readonly-value-"]');
             if (valueSpan) {
               const text = valueSpan.textContent.trim();
               return this.parseWeight(text);
@@ -344,10 +364,10 @@ if (typeof window.OrderDataExtractor === 'undefined') {
     // Extract Dimensions
     extractDimension() {
       try {
-        const labels = document.querySelectorAll('.label-Pg0dC8r.field-label-xuTxiUg');
+        const labels = document.querySelectorAll('[class*="label-"]');
         for (let label of labels) {
           if (label.textContent.includes('Size (in)')) {
-            const valueSpan = label.parentElement.querySelector('.readonly-value-iLmxDlc');
+            const valueSpan = label.parentElement.querySelector('[class*="readonly-value-"]');
             if (valueSpan) {
               let dimensions = valueSpan.textContent.trim();
               // Remove spaces around 'x' to format like "16x13x5" instead of "16 x 13 x 5"
@@ -366,7 +386,7 @@ if (typeof window.OrderDataExtractor === 'undefined') {
     // Extract Shipping Cost
     extractShipping() {
       try {
-        const shippingElements = document.querySelectorAll('.caption-oIOWlTB[aria-describedby="rate-card-label-cost"]');
+        const shippingElements = document.querySelectorAll('[class*="caption-"][aria-describedby="rate-card-label-cost"]');
         if (shippingElements.length > 0) {
           const text = shippingElements[0].textContent;
           const match = text.match(/([0-9.]+)/);
@@ -382,7 +402,7 @@ if (typeof window.OrderDataExtractor === 'undefined') {
     // Extract Carrier
     extractCarrier() {
       try {
-        const carrierElement = document.querySelector('.h3-q6GsezA.service-name-gQ0OeUi');
+        const carrierElement = document.querySelector('[class*="service-name-"]');
         if (carrierElement) {
           return carrierElement.textContent.trim();
         }
@@ -403,15 +423,28 @@ if (typeof window.OrderDataExtractor === 'undefined') {
       const orderNumber = this.extractOrderNumber();
       const recipient = this.extractRecipient();
       const orderTotal = this.extractOrderTotal();
-      const shippingTotal = this.extractShippingTotal();
-      const weight = this.extractWeight();
+      let shippingTotal = this.extractShippingTotal();
+      let weight = this.extractWeight();
       const dimension = this.extractDimension();
-      const shipping = this.extractShipping();
+      let shipping = this.extractShipping();
       const carrier = this.extractCarrier();
 
       // Extract all items
       const items = this.extractItems();
       this.dataRows = [];
+
+      const numItems = items.length > 0 ? items.length : 1;
+
+      // Divide globally shared numeric costs evenly if this happens to be a multi-item combined order
+      if (numItems > 1) {
+        if (weight !== 'N/A' && !isNaN(parseFloat(weight))) {
+          weight = (parseFloat(weight) / numItems).toFixed(2);
+          weight = parseFloat(weight).toString(); // clean off trailing decimals if .00
+        }
+        if (shipping !== 'N/A' && !isNaN(parseFloat(shipping))) {
+          shipping = (parseFloat(shipping) / numItems).toFixed(2);
+        }
+      }
 
       // Create a complete data row for each item
       for (const item of items) {
@@ -423,7 +456,7 @@ if (typeof window.OrderDataExtractor === 'undefined') {
           itemName: item.itemName,
           sku: item.sku,
           quantity: item.quantity,
-          orderTotal,
+          orderTotal: item.itemTotal || orderTotal,
           shippingTotal,
           weight,
           dimension,
