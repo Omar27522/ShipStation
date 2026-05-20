@@ -8,8 +8,18 @@
     "clipboardWrite",
     "scripting"
   ],
+  "icons": {
+    "16": "icons/apple-touch-icon.png",
+    "48": "icons/apple-touch-icon.png",
+    "128": "icons/apple-touch-icon.png"
+  },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/apple-touch-icon.png",
+      "48": "icons/apple-touch-icon.png",
+      "128": "icons/apple-touch-icon.png"
+    }
   },
   "content_scripts": [
     {

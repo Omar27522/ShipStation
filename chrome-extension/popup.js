@@ -6,6 +6,141 @@ document.addEventListener('DOMContentLoaded', function () {
   const statusDiv = document.getElementById('status');
   const previewDiv = document.getElementById('preview');
 
+<<<<<<< HEAD
+  // Populate UI elements
+  const populateBtn = document.getElementById('populateBtn');
+  const popWeight = document.getElementById('popWeight');
+  const popLength = document.getElementById('popLength');
+  const popWidth = document.getElementById('popWidth');
+  const popHeight = document.getElementById('popHeight');
+
+  // Load saved values from localStorage
+  if (localStorage.getItem('popWeight')) popWeight.value = localStorage.getItem('popWeight');
+  if (localStorage.getItem('popLength')) popLength.value = localStorage.getItem('popLength');
+  if (localStorage.getItem('popWidth')) popWidth.value = localStorage.getItem('popWidth');
+  if (localStorage.getItem('popHeight')) popHeight.value = localStorage.getItem('popHeight');
+
+  // Save values on input change
+  const saveInputs = () => {
+    localStorage.setItem('popWeight', popWeight.value);
+    localStorage.setItem('popLength', popLength.value);
+    localStorage.setItem('popWidth', popWidth.value);
+    localStorage.setItem('popHeight', popHeight.value);
+  };
+  popWeight.addEventListener('input', saveInputs);
+  popLength.addEventListener('input', saveInputs);
+  popWidth.addEventListener('input', saveInputs);
+  popHeight.addEventListener('input', saveInputs);
+
+  // Clear populate inputs button handler
+  const clearPopulateInputsBtn = document.getElementById('clearPopulateInputsBtn');
+  clearPopulateInputsBtn.addEventListener('click', function () {
+    popWeight.value = '';
+    popLength.value = '';
+    popWidth.value = '';
+    popHeight.value = '';
+    saveInputs();
+  });
+
+  // Populate button click handler
+  populateBtn.addEventListener('click', async function () {
+    console.log('Populate button clicked');
+    
+    const weight = popWeight.value.trim();
+    const length = popLength.value.trim();
+    const width = popWidth.value.trim();
+    const height = popHeight.value.trim();
+
+    if (!weight && !length && !width && !height) {
+      showErrorStatus('Please enter at least one shipment detail to populate (Weight, Length, Width, or Height).');
+      return;
+    }
+
+    setPopulateLoadingState();
+
+    try {
+      // Get current active tab
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      console.log('Current tab for populate:', tab);
+
+      // Inject content script if not already loaded
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        });
+        console.log('Content script injected successfully for populate');
+      } catch (injectionError) {
+        console.log('Content script already loaded or injection failed:', injectionError.message);
+      }
+
+      // Wait a moment for script to initialize
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Send message to content script
+      console.log('Sending populateFields message to content script...');
+      const response = await chrome.tabs.sendMessage(tab.id, {
+        action: 'populateFields',
+        data: { weight, length, width, height }
+      });
+      console.log('Received response from populate:', response);
+
+      if (response && response.success) {
+        const fieldsPopulated = [
+          weight ? 'Weight' : '',
+          length ? 'Length' : '',
+          width ? 'Width' : '',
+          height ? 'Height' : ''
+        ].filter(Boolean).join(', ');
+
+        showSuccessMessage(
+          `Successfully populated ${response.successCount} field(s)!`,
+          `Fields updated: ${fieldsPopulated}`
+        );
+      } else if (response && !response.success) {
+        showErrorStatus('Failed to populate: ' + (response.error || 'Unknown error. Make sure you are on the Configure Shipment section.'));
+      } else {
+        showErrorStatus('No response from content script. Make sure you are on an active ShipStation order details tab.');
+      }
+
+    } catch (error) {
+      console.error('Error during population:', error);
+      if (error.message.includes('Could not establish connection')) {
+        showErrorStatus('Connection Error: Content script not loaded. Try refreshing the page and trying again.');
+      } else {
+        showErrorStatus('Error: ' + error.message);
+      }
+    }
+
+    resetPopulateButtonState();
+  });
+
+  // Populate loading state
+  function setPopulateLoadingState() {
+    populateBtn.disabled = true;
+    populateBtn.innerHTML = '<span class="button-icon">⏳</span>Populating...';
+    statusDiv.innerHTML = '';
+    previewDiv.innerHTML = '';
+  }
+
+  // Populate reset state
+  function resetPopulateButtonState() {
+    populateBtn.disabled = false;
+    populateBtn.innerHTML = '<span class="button-icon">📦</span>Populate Page';
+  }
+
+  function showSuccessMessage(message, subMessage) {
+    statusDiv.innerHTML = `
+      <div class="status success">
+        <span class="status-icon">✅</span>
+        <span class="status-text">${message}</span>
+      </div>
+      ${subMessage ? `<div class="clipboard-notice" style="background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; padding: 8px 12px; border-radius: 4px; font-size: 13px;">${subMessage}</div>` : ''}
+    `;
+  }
+
+=======
+>>>>>>> 6b9a9f6e8afb654a6ed6b6dd83c7965a4221895a
   // Extract button click handler
   extractBtn.addEventListener('click', async function () {
     console.log('Extract button clicked');
